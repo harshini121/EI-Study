@@ -1,0 +1,184 @@
+// Direction.java
+public class Direction {
+    private static final String[] DIRECTIONS = {"N", "E", "S", "W"};
+    private int index;
+
+    public Direction(String initialDirection) {
+        this.index = java.util.Arrays.asList(DIRECTIONS).indexOf(initialDirection);
+    }
+
+    public void turnLeft() {
+        index = (index - 1 + DIRECTIONS.length) % DIRECTIONS.length;
+    }
+
+    public void turnRight() {
+        index = (index + 1) % DIRECTIONS.length;
+    }
+
+    public String getDirection() {
+        return DIRECTIONS[index];
+    }
+}
+
+// Grid.java
+import java.util.Set;
+
+public class Grid {
+    private int width;
+    private int height;
+    private Set<String> obstacles;
+
+    public Grid(int width, int height, Set<String> obstacles) {
+        this.width = width;
+        this.height = height;
+        this.obstacles = obstacles;
+    }
+
+    public boolean isWithinBounds(int x, int y) {
+        return x >= 0 && x < width && y >= 0 && y < height;
+    }
+
+    public boolean isObstacle(int x, int y) {
+        return obstacles.contains(x + "," + y);
+    }
+}
+
+// Command.java
+public interface Command {
+    void execute();
+}
+
+// MoveCommand.java
+public class MoveCommand implements Command {
+    private Rover rover;
+    private Grid grid;
+
+    public MoveCommand(Rover rover, Grid grid) {
+        this.rover = rover;
+        this.grid = grid;
+    }
+
+    @Override
+    public void execute() {
+        rover.moveForward(grid);
+    }
+}
+
+// TurnLeftCommand.java
+public class TurnLeftCommand implements Command {
+    private Rover rover;
+
+    public TurnLeftCommand(Rover rover) {
+        this.rover = rover;
+    }
+
+    @Override
+    public void execute() {
+        rover.turnLeft();
+    }
+}
+
+// TurnRightCommand.java
+public class TurnRightCommand implements Command {
+    private Rover rover;
+
+    public TurnRightCommand(Rover rover) {
+        this.rover = rover;
+    }
+
+    @Override
+    public void execute() {
+        rover.turnRight();
+    }
+}
+
+// Rover.java
+import java.util.Map;
+import java.util.HashMap;
+
+public class Rover {
+    private int x;
+    private int y;
+    private Direction direction;
+    private static final Map<String, int[]> MOVES = new HashMap<>();
+
+    static {
+        MOVES.put("N", new int[]{0, 1});
+        MOVES.put("E", new int[]{1, 0});
+        MOVES.put("S", new int[]{0, -1});
+        MOVES.put("W", new int[]{-1, 0});
+    }
+
+    public Rover(int x, int y, String direction) {
+        this.x = x;
+        this.y = y;
+        this.direction = new Direction(direction);
+    }
+
+    public void moveForward(Grid grid) {
+        int[] move = MOVES.get(direction.getDirection());
+        int newX = x + move[0];
+        int newY = y + move[1];
+        if (grid.isWithinBounds(newX, newY) && !grid.isObstacle(newX, newY)) {
+            x = newX;
+            y = newY;
+        }
+    }
+
+    public void turnLeft() {
+        direction.turnLeft();
+    }
+
+    public void turnRight() {
+        direction.turnRight();
+    }
+
+    public String getPosition() {
+        return String.format("(%d, %d, %s)", x, y, direction.getDirection());
+    }
+
+    public String statusReport(Grid grid) {
+        String status = String.format("Rover is at (%d, %d) facing %s.", x, y, direction.getDirection());
+        if (grid.isObstacle(x, y)) {
+            status += " Obstacle detected.";
+        } else {
+            status += " No Obstacles detected.";
+        }
+        return status;
+    }
+}
+
+// Main.java
+import java.util.HashSet;
+import java.util.Set;
+
+public class Main {
+    public static void executeCommands(Rover rover, Command[] commands) {
+        for (Command command : commands) {
+            command.execute();
+        }
+    }
+
+    public static void main(String[] args) {
+        Set<String> obstacles = new HashSet<>();
+        obstacles.add("2,2");
+        obstacles.add("3,5");
+
+        Grid grid = new Grid(10, 10, obstacles);
+        Rover rover = new Rover(0, 0, "N");
+
+        Command[] commands = {
+            new MoveCommand(rover, grid),
+            new MoveCommand(rover, grid),
+            new TurnRightCommand(rover),
+            new MoveCommand(rover, grid),
+            new TurnLeftCommand(rover),
+            new MoveCommand(rover, grid)
+        };
+
+        executeCommands(rover, commands);
+
+        System.out.println(rover.getPosition()); // Expected output: (1, 3, E)
+        System.out.println(rover.statusReport(grid)); // Expected output: "Rover is at (1, 3) facing E. No Obstacles detected."
+    }
+}
